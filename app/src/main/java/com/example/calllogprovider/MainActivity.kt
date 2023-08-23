@@ -352,24 +352,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    @SuppressLint("Range")
-
-    private fun getContactNameFromNumber(number: String?): String? {
-        val uri = Uri.withAppendedPath(
-            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-            Uri.encode(number)
-        )
-        val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
-
-        val cursor = contentResolver.query(uri, projection, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                return it.getString(it.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME))
-            }
-        }
-
-        return null
-    }
 
 
     private fun getCallTypeString(callType: Int): String {
