@@ -6,17 +6,13 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
-import android.net.Uri
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Environment
 import android.provider.CallLog
-import android.provider.ContactsContract
-import android.provider.Settings
 import android.view.View
 import android.widget.Button
-import android.widget.ImageButton
+
 import android.widget.ListView
 import android.widget.Toast
 
@@ -25,7 +21,7 @@ import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-//import kotlinx.android.synthetic.main.show_call_log_activity.listView
+
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -251,10 +247,9 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
     @SuppressLint("MissingPermission", "Range")
     private fun displayLog() {
-        var cols = arrayOf(
+        val cols = arrayOf(
             CallLog.Calls._ID, CallLog.Calls.CACHED_NAME,
             CallLog.Calls.NUMBER,
             CallLog.Calls.TYPE,
@@ -273,7 +268,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        var rs = contentResolver.query(
+        val rs = contentResolver.query(
             CallLog.Calls.CONTENT_URI, cols, selection, selectionArgs,
             "${CallLog.Calls.DATE} DESC"
         )
@@ -333,7 +328,7 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-        var listview = findViewById<ListView>(R.id.listView)
+        val listview = findViewById<ListView>(R.id.listView)
         listview.adapter = adapter
 
         numRecords = adapter.count
@@ -367,11 +362,7 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-
-
     }
-
-
 }
 
 
