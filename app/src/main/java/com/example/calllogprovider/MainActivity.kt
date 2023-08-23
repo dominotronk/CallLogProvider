@@ -7,11 +7,13 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
 import android.provider.CallLog
 import android.provider.ContactsContract
+import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
@@ -21,6 +23,7 @@ import android.widget.Toast
 import android.widget.SimpleCursorAdapter
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 //import kotlinx.android.synthetic.main.show_call_log_activity.listView
 import java.text.SimpleDateFormat
@@ -46,14 +49,29 @@ class MainActivity : AppCompatActivity() {
 
         selectedStartDate = 0
         selectedEndDate = Long.MAX_VALUE
-        displayLog()
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_CALL_LOG
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                Array(1) { Manifest.permission.READ_CALL_LOG },
+                101
+            )
+        } else {
+            displayLog()
+        }
+
 
         btnDatePicker = findViewById(R.id.floatingActionButton)
 
         val btnExport = findViewById<Button>(R.id.xlsbutton)
         btnExport.setOnClickListener {
+
             exportCallLogToExcel()
         }
+
 
         val btnRefresh = findViewById<Button>(R.id.Refreshbutton)
         btnRefresh.setOnClickListener {
@@ -73,26 +91,26 @@ class MainActivity : AppCompatActivity() {
                 // Toast.makeText(this, "${datePicker.headerText} is selected", Toast.LENGTH_LONG).show()
 
 
-
                 val startDate = selection.first
                 var endDate = selection.second
 
 
-                if (startDate !=null && endDate !=null){
+                if (startDate != null && endDate != null) {
                     selectedStartDate = startDate
-                    endDate += (24*60*60*1000)
+                    endDate += (24 * 60 * 60 * 1000)
                     selectedEndDate = endDate
 
                     displayLog()
-                }else
-                    Toast.makeText(this,"Proszę wybrać zakres dat",Toast.LENGTH_SHORT).show()
+                } else
+                    Toast.makeText(this, "Proszę wybrać zakres dat", Toast.LENGTH_SHORT).show()
 
 
             }
 
             // Setting up the event for when cancelled is clicked
             datePicker.addOnNegativeButtonClickListener {
-                Toast.makeText(this, "${datePicker.headerText} is cancelled", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "${datePicker.headerText} is cancelled", Toast.LENGTH_LONG)
+                    .show()
             }
 
             // Setting up the event for when back button is pressed
@@ -102,18 +120,6 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_CALL_LOG
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                Array(1) { Manifest.permission.READ_CALL_LOG },
-                101
-            )
-        } else
-            displayLog()
     }
 
 
@@ -122,11 +128,18 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 101 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        if (requestCode == 101 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             displayLog()
+        } else if (requestCode == 102 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+            exportCallLogToExcel()
+        }
     }
 
+
     private fun exportCallLogToExcel() {
+
+
         val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
         val cols = arrayOf(
             CallLog.Calls.CACHED_NAME,
@@ -171,12 +184,14 @@ class MainActivity : AppCompatActivity() {
                             val formattedDate = dateFormat.format(Date(callDate))
                             cell.setCellValue(formattedDate)
                         }
+
                         CallLog.Calls.TYPE -> {
                             val callType = cursor.getInt(i)
                             val callTypeString = getCallTypeString(callType)
                             cell.setCellValue(callTypeString)
 
                         }
+
                         else -> {
                             val value = when (cursor.getType(i)) {
                                 Cursor.FIELD_TYPE_STRING -> cursor.getString(i)
@@ -191,33 +206,49 @@ class MainActivity : AppCompatActivity() {
 
             cursor.close()
 
-            // Utwórz plik w katalogu Documents
-            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val fileName = "CallLog.xls"
-            val file = File(documentsDir, fileName)
-            val fileOut = FileOutputStream(file)
-            workbook.write(fileOut)
-            fileOut.close()
-
-            Toast.makeText(this, "Dane eksportowane do pliku Excel", Toast.LENGTH_SHORT).show()
-
-            val shareIntent = Intent(Intent.ACTION_SEND)
-            shareIntent.type = "application/vnd.ms-excel" // Typ pliku Excel
-
-            // Wskazanie pliku do udostępnienia
-            val fileUri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.provider",
-                file
-            )
-            shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri)
-
-            // Rozpoczęcie aktywności udostępniania
-            startActivity(Intent.createChooser(shareIntent, "Wyślij plik Excel"))
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val permissions = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    ActivityCompat.requestPermissions(this, permissions, 102)
+                } else {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                        102
+                    )
+                }
+            } else {
+                saveExcelFile(workbook)
+            }
         }
     }
 
+    private fun saveExcelFile(workbook: HSSFWorkbook) {
+        val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+        val currentDateTime = dateFormat.format(Date())
+        val fileName = "CallLog_$currentDateTime.xls"
 
+        val externalDir = getExternalFilesDir(null)
+        val filePath = File(externalDir, fileName)
+
+        val fileOut = FileOutputStream(filePath)
+        workbook.write(fileOut)
+        fileOut.close()
+
+        Toast.makeText(this, "Dane eksportowane do pliku Excel", Toast.LENGTH_SHORT).show()
+
+        val shareIntent = Intent(Intent.ACTION_SEND)
+        shareIntent.type = "application/vnd.ms-excel"
+        val fileUri = FileProvider.getUriForFile(
+            this,
+            "${packageName}.provider",
+            filePath
+        )
+        shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri)
+        startActivity(Intent.createChooser(shareIntent, "Wyślij plik Excel"))
+    }
 
 
 
