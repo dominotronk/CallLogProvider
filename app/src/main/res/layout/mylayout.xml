@@ -6,7 +6,7 @@
     app:cardUseCompatPadding="true"
     app:cardCornerRadius="20dp"
     app:contentPadding="10dp"
-    app:cardBackgroundColor="#A5E9F3">
+    app:cardBackgroundColor="#40acd6">
 
 
     <LinearLayout
